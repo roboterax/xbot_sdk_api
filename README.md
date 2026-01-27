@@ -8,22 +8,26 @@ RobotEraSDKAPI 是一个基于ROS2的Python库，提供完整的机器人控制�
 - 手部控制: XHand/XHand Lite关节控制、抓取动作、自定义手部运动
 - 底盘控制: 线速度和角速度控制、前进后退、转向运动
 
-## 1.2 主要特性
-
-- 易于使用: 简洁的API设计，快速上手
-- 功能完整: 涵盖机器人控制的各个方面
-- 高性能: 支持实时控制和100Hz高频发布
-- 安全可靠: 完善的错误处理和状态管理
-- 灵活扩展: 模块化设计，易于扩展和定制
-
-## 1.3 适用场景
+## 1.2 适用场景
 
 - 机器人研究和开发
 - 原型验证和测试
 
 # 2. 环境要求
 
-需要在星动纪元提供的 developer 环境里面使用
+- 星动纪元提供的 developer 环境里面使用
+- 在带有 ros2-humble + cyclonedds 环境中，需要执行如下操作：
+```shell
+# 下载对应的消息定义，并 source
+git clone https://github.com/roboterax/teleop_client.git
+cd teleop_client
+colcon build
+source install/setup.bash
+
+# 设置环境变量
+export ROS_DOMAIN_ID=211
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+```
 
 # 3. 快速上手
 ## 3.1 基础使用示例
@@ -37,8 +41,9 @@ def main():
         # 创建机器人控制器
         robot = RobotController("my_robot")
         
-        # 创建轨迹控制器
-        trajectory = TrajectoryController(robot)
+        # 创建轨迹控制器，默认机型为 Q5
+        # 如使用 L3 或 L7，请将 "Q5" 修改为 "L3" 或 "L7"
+        trajectory = TrajectoryController(robot, "Q5")
         
         # 启动关节服务
         robot.start_joint_service()
@@ -117,7 +122,9 @@ def main():
     try:
         # 创建机器人控制器
         robot = RobotController("hand_and_base_demo")
-        trajectory = TrajectoryController(robot)
+        # 创建轨迹控制器，默认机型为 Q5
+        # 如使用 L3 或 L7，请将 "Q5" 修改为 "L3" 或 "L7"
+        trajectory = TrajectoryController(robot, "Q5")
         
         # 初始化机器人
         robot.start_joint_service()
@@ -178,7 +185,9 @@ from robot_controller import RobotController, TrajectoryController
 def main():
     try:
         robot = RobotController("hand_control_demo")
-        trajectory = TrajectoryController(robot)
+        # 创建轨迹控制器，默认机型为 Q5
+        # 如使用 L3 或 L7，请将 "Q5" 修改为 "L3" 或 "L7"
+        trajectory = TrajectoryController(robot, "Q5")
         
         # 初始化机器人
         robot.start_joint_service()
@@ -220,7 +229,9 @@ from robot_controller import RobotController, TrajectoryController
 def main():
     try:
         robot = RobotController("base_control_demo")
-        trajectory = TrajectoryController(robot)
+        # 创建轨迹控制器，默认机型为 Q5
+        # 如使用 L3 或 L7，请将 "Q5" 修改为 "L3" 或 "L7"
+        trajectory = TrajectoryController(robot, "Q5")
         
         # 初始化机器人
         robot.start_joint_service()
@@ -250,8 +261,9 @@ if __name__ == "__main__":
 # 创建基础控制器
 robot = RobotController("robot_name")
 
-# 创建轨迹控制器
-trajectory = TrajectoryController(robot)
+# 创建轨迹控制器，默认机型为 Q5
+# 如使用 L3 或 L7，请将 "Q5" 修改为 "L3" 或 "L7"
+trajectory = TrajectoryController(robot, "Q5")
 
 # 创建MPC控制器
 mpc = MPCController(robot)
@@ -580,12 +592,13 @@ stop_base_drive() -> bool
 
 **构造函数**
 ```python
-TrajectoryController(robot_controller)
+TrajectoryController(robot_controller, model: str)
 ```
 **功能**：创建轨迹控制器实例。
 
 **参数**:
 - robot_controller: RobotController实例
+- model: 机器人机型名称，当前支持 "Q5"、"L3"、"L7"。
 
 **set_zero_position()**
 ```python

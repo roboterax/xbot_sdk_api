@@ -5,7 +5,7 @@ Provides trajectory control functionality using ROS2 actions.
 
 import rclpy
 from rclpy.action import ActionClient
-from xbot_common_interfaces.action import SimpleTrajectory
+from xbot_common_interfaces.action import SimpleActions
 from xbot_common_interfaces.msg import HybridJointCommand
 from typing import Optional, List, Dict, Any, Callable
 import time
@@ -20,23 +20,29 @@ class TrajectoryController:
     custom trajectory planning, and trajectory monitoring.
     """
     
-    def __init__(self, robot_controller):
+    def __init__(self, robot_controller, model: str):
         """
         Initialize the trajectory controller.
         
         Args:
             robot_controller: Instance of RobotController class
+            model: Robot model name. If 'Q5', use '/wr1_controller/commands',
+                   otherwise use 'hybrid_body_controller/commands'.
         """
         self.robot_controller = robot_controller
         self.logger = robot_controller.get_logger()
         
-        # Action client for trajectory control
+        # Action client for simple actions control (zero, lift_up, etc.)
         self.trajectory_action_client = robot_controller.trajectory_action_client
         
         # Publisher for low-level joint commands (hybrid controller)
-        self.robot_controller.declare_parameter('controller_topic_name', 'hybrid_body_controller/commands')
-        controller_topic = self.robot_controller.get_parameter('controller_topic_name').value
-        self.hybrid_cmd_publisher = self.robot_controller.create_publisher(HybridJointCommand, controller_topic, 1)
+        if model == "Q5":
+            controller_topic = "/wr1_controller/commands"
+        else:
+            controller_topic = "hybrid_body_controller/commands"
+        self.hybrid_cmd_publisher = self.robot_controller.create_publisher(
+            HybridJointCommand, controller_topic, 1
+        )
         
     
     def set_zero_position(self, duration: float = 4.0) -> bool:
@@ -52,13 +58,13 @@ class TrajectoryController:
         """
         try:
             if not self.trajectory_action_client.wait_for_server(timeout_sec=10):
-                raise RuntimeError("Trajectory action server not available")
+                raise RuntimeError("SimpleActions action server not available")
 
-            goal_msg = SimpleTrajectory.Goal()
-            goal_msg.traj_type = 0  # Zero position
-            goal_msg.duration = duration
+            goal_msg = SimpleActions.Goal()
+            goal_msg.action_name = "zero"
+            goal_msg.time_cost = float(duration)
             
-            self.logger.info(f"Setting joints to zero position (duration: {duration}s)...")
+            self.logger.info(f"Setting joints to zero position (time_cost: {duration}s)...")
             
             # Send goal and wait for result
             future = self.trajectory_action_client.send_goal_async(goal_msg)
@@ -66,21 +72,23 @@ class TrajectoryController:
             
             goal_handle = future.result()
             if not goal_handle.accepted:
-                self.logger.error("Trajectory goal was rejected")
+                self.logger.error("SimpleActions goal was rejected")
                 return False
             
-            self.logger.info("Trajectory goal accepted, waiting for result...")
+            self.logger.info("SimpleActions goal accepted, waiting for result...")
             
             # Wait for result
             result_future = goal_handle.get_result_async()
             rclpy.spin_until_future_complete(self.robot_controller, result_future)
             
-            result = result_future.result().result
-            if result is not None:
+            result_msg = result_future.result().result
+            if result_msg is not None and result_msg.result == result_msg.SUCCESS:
                 self.logger.info("Zero position set successfully")
                 return True
             else:
-                self.logger.error("Failed to set zero position")
+                code = getattr(result_msg, "result", None)
+                msg = getattr(result_msg, "message", "")
+                self.logger.error(f"Failed to set zero position, code={code}, message='{msg}'")
                 return False
                 
         except Exception as e:
@@ -100,13 +108,13 @@ class TrajectoryController:
         """
         try:
             if not self.trajectory_action_client.wait_for_server(timeout_sec=10):
-                raise RuntimeError("Trajectory action server not available")
+                raise RuntimeError("SimpleActions action server not available")
                 
-            goal_msg = SimpleTrajectory.Goal()
-            goal_msg.traj_type = 2  # Lift up position
-            goal_msg.duration = duration
+            goal_msg = SimpleActions.Goal()
+            goal_msg.action_name = "lift_up"
+            goal_msg.time_cost = float(duration)
             
-            self.logger.info(f"Setting joints to lift up position (duration: {duration}s)...")
+            self.logger.info(f"Setting joints to lift up position (time_cost: {duration}s)...")
             
             # Send goal and wait for result
             future = self.trajectory_action_client.send_goal_async(goal_msg)
@@ -114,21 +122,23 @@ class TrajectoryController:
             
             goal_handle = future.result()
             if not goal_handle.accepted:
-                self.logger.error("Trajectory goal was rejected")
+                self.logger.error("SimpleActions goal was rejected")
                 return False
             
-            self.logger.info("Trajectory goal accepted, waiting for result...")
+            self.logger.info("SimpleActions goal accepted, waiting for result...")
             
             # Wait for result
             result_future = goal_handle.get_result_async()
             rclpy.spin_until_future_complete(self.robot_controller, result_future)
             
-            result = result_future.result().result
-            if result is not None:
+            result_msg = result_future.result().result
+            if result_msg is not None and result_msg.result == result_msg.SUCCESS:
                 self.logger.info("Lift up position set successfully")
                 return True
             else:
-                self.logger.error("Failed to set lift up position")
+                code = getattr(result_msg, "result", None)
+                msg = getattr(result_msg, "message", "")
+                self.logger.error(f"Failed to set lift up position, code={code}, message='{msg}'")
                 return False
                 
         except Exception as e:

@@ -9,7 +9,7 @@ from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from std_srvs.srv import Trigger
 from xbot_common_interfaces.srv import DynamicLaunch
-from xbot_common_interfaces.action import SimpleTrajectory
+from xbot_common_interfaces.action import SimpleActions
 from xbot_common_interfaces.msg import HybridJointCommand
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import TwistStamped
@@ -60,11 +60,11 @@ class RobotController(Node):
             callback_group=self.callback_group
         )
         
-        # Action client for trajectory control
+        # Action client for simple predefined actions (e.g., zero, lift_up)
         self.trajectory_action_client = ActionClient(
             self,
-            SimpleTrajectory,
-            '/simple_trajectory',
+            SimpleActions,
+            '/simple_actions',
             callback_group=self.callback_group
         )
         

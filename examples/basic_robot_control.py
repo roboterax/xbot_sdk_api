@@ -26,7 +26,8 @@ def main():
         robot = RobotController("basic_robot_control")
         
         # Create specialized controllers
-        trajectory_controller = TrajectoryController(robot)
+        # Default model is Q5. For L3 or L7, change "Q5" to "L3" or "L7".
+        trajectory_controller = TrajectoryController(robot, "Q5")
         
         print("Robot controller created successfully!")
         

@@ -43,7 +43,9 @@ def main():
     robot = None
     try:
         robot = RobotController("mpc_control_demo")
-        trajectory_controller = TrajectoryController(robot)
+        # Robot model: default is Q5. For L3 or L7, change "Q5" to "L3" or "L7".
+        model = "Q5"
+        trajectory_controller = TrajectoryController(robot, model)
         mpc = MPCController(robot)
 
         if robot.start_joint_service("", False, "pos"):
@@ -70,6 +72,15 @@ def main():
             print("✗ Failed to set zero position")
             return
 
+        # Step 4: Set to lift up position
+        print("\n=== Step 4: Setting Lift Up Position ===")
+        print("This process takes about 3 seconds...")
+        if trajectory_controller.set_lift_up_position(duration=3.0):
+            print("✓ Lift up position set successfully")
+        else:
+            print("✗ Failed to set lift up position")
+            return
+
         print("Activating algorithm control...")
         if not robot.activate_algorithm_control():
             print("✗ Failed to activate algorithm control")
@@ -85,14 +96,20 @@ def main():
         status = mpc.query_mpc()
         print("MPC status:", status)
 
-        # Build a ServoPose message similar to CLI example
+        # Build a ServoPose message; use Q5-specific parameters if model is Q5
         msg = ServoPose()
-        msg.left_pose = make_pose_stamped(0.425, 0.3, 0.292, 0.612, -0.016, 0.79, -0.006)
-        msg.right_pose = make_pose_stamped(0.417, -0.146, 0.382, 0.521, 0.1, 0.842, -0.096)
-        msg.head_pose = make_pose_stamped(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+        if model == "Q5":
+            msg.left_pose = make_pose_stamped(0.257, -0.346, 1.412, 0.612, -0.016, 0.79, -0.006)
+            msg.right_pose = make_pose_stamped(-0.017, -0.208, 0.777, 0.996, -0.010, 0.070, 0.045)
+            msg.head_pose = make_pose_stamped(-0.101, 0.000, 1.411, -0.000, 0.003, -0.000, 0.999)
+        else:
+            # Generic/default example pose
+            msg.left_pose = make_pose_stamped(0.425, 0.3, 0.292, 0.612, -0.016, 0.79, -0.006)
+            msg.right_pose = make_pose_stamped(0.417, -0.146, 0.382, 0.521, 0.1, 0.842, -0.096)
+            msg.head_pose = make_pose_stamped(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 
-        print("Publishing ServoPose at 10Hz for 3s...")
-        mpc.publish_servo_pose(msg, rate_hz=50.0, duration=3.0)
+        print("Publishing ServoPose at 80Hz for 3s...")
+        mpc.publish_servo_pose(msg, rate_hz=80.0, duration=3.0)
 
         print("Stopping MPC...")
         mpc.stop_mpc()

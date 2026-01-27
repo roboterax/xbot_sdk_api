@@ -59,6 +59,7 @@ class MPCController:
         resp = self._call_teleop(payload)
         ok = resp is not None and getattr(resp, 'result', False)
         self.logger.info("MPC start: %s" % ("OK" if ok else "FAILED"))
+        time.sleep(3)
         return ok
 
     def stop_mpc(self) -> bool:
@@ -86,14 +87,19 @@ class MPCController:
         # Fallback: interpret result boolean
         return 1 if getattr(resp, 'result', False) else 0
 
-    def publish_servo_pose(self, msg: ServoPose, rate_hz: float = 10.0, duration: float = 2.0):
+    def publish_servo_pose(self, msg: ServoPose, rate_hz: float = 80.0, duration: float = 2.0):
         """Publish ServoPose at rate for duration seconds."""
         dt = 1.0 / max(1.0, rate_hz)
         end_time = time.time() + max(0.0, duration)
         while time.time() < end_time and rclpy.ok():
-            msg.header.stamp = self.node.get_clock().now().to_msg() if hasattr(msg, 'header') else msg.left_pose.header.stamp
+            # ServoPose itself does not have a header field; stamp the inner PoseStamped headers instead.
+            now_stamp = self.node.get_clock().now().to_msg()
+            if msg.left_pose is not None:
+                msg.left_pose.header.stamp = now_stamp
+            if msg.right_pose is not None:
+                msg.right_pose.header.stamp = now_stamp
+            if msg.head_pose is not None:
+                msg.head_pose.header.stamp = now_stamp
+
             self.servo_pose_pub.publish(msg)
-            rclpy.spin_once(self.node, timeout_sec=0.0)
             time.sleep(dt)
-
-
